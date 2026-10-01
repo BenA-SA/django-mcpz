@@ -15,17 +15,22 @@ The important code lives in these files:
 * ``pizzeria/views.py`` and ``pizzeria/templates/pizzeria/menu.html``: the menu web page that the ``menu_link`` tool points at.
 * ``pizzeria/static/pizzeria/icon.svg``: the server’s icon, which clients show alongside its title.
 
-The six tools are:
+The included tools are:
 
 * ``current_date``: today’s date and weekday, so an LLM can work out what relative dates like “tomorrow” mean.
+
 * ``search_menu``: the pizzas available on a date, with an optional name query and price limit, returning the notes for the model to read.
+
 * ``place_order``: order a pizza from today’s menu, with a ``requests`` field for whatever the model gleaned from the notes.
   The server enforces the menu, rejecting pizzas not available today with an in-band error the model can act on.
+
 * ``recommend_pizza``: today’s most ordered pizza within the user’s budget, vegetarian if they like, asking them for both with `elicitation <https://django-mcpz.readthedocs.io/en/latest/servers.html#asking-the-user-a-question>`__.
   It needs a client that supports form mode elicitation on the 2026-07-28 protocol, such as the Python SDK below.
   Other clients get an in-band error saying they can’t answer the question.
+
 * ``orders_chart``: a pie chart of the pizzas ordered today, as a PNG image drawn with `Pillow <https://pypi.org/project/pillow/>`__, with the numbers behind it as text.
   The text is there so the model can answer from it in clients that do not show it images.
+
 * ``menu_link``: a link to the menu web page for a date, past or future, for the user to open in a browser.
 
 Setup

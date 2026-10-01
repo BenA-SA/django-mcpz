@@ -276,7 +276,9 @@ class AskingTests(ElicitationTestCase, ParametrizedTestCase):
         with pytest.raises(ImproperlyConfigured) as excinfo:
             elicit(request, "Really?", Sized)
 
-        assert "only inside a tool function" in str(excinfo.value)
+        assert excinfo.value.args[0].startswith(
+            "elicit() works only inside a tool function"
+        )
 
 
 class KeyTests(ElicitationTestCase):

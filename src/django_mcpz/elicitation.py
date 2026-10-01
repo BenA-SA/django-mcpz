@@ -22,11 +22,9 @@ from django.http import HttpRequest
 
 STATE_SALT = "django_mcpz.elicitation"
 
+# Seconds a requestState stays valid, keeping the replay window short, as the
+# specification asks, while leaving a person time to answer.
 STATE_MAX_AGE = 600
-"""
-Seconds a requestState stays valid, keeping the replay window short, as the
-specification asks, while leaving a person time to answer.
-"""
 
 
 class Answer(msgspec.Struct):

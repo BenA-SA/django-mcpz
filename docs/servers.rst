@@ -384,16 +384,20 @@ A tool that asks therefore runs again from the top for each answer, so everythin
         order.refund()  # runs once
         return "Refunded."
 
-Read freely before a question, and leave the writes until after the last one.
-Under |ATOMIC_REQUESTS|__ a write made before a question is rolled back when the question is asked; without it, the write is committed and the call carrying the answer makes it again.
+Basic data usage guidance:
+
+* Read freely before and during questions.
+* Make writes only after all questions are answered, so that the tool’s writes happen at most once.
+
+Under |ATOMIC_REQUESTS|__ a write made before a question is rolled back when the question is asked, at least.
 
 .. |ATOMIC_REQUESTS| replace:: ``ATOMIC_REQUESTS``
 __ https://docs.djangoproject.com/en/stable/ref/settings/#atomic-requests
 
 The answers already given travel in an opaque ``requestState`` that the client echoes back unread, as covered in :ref:`server-protocol-support`.
-It is bound to the caller it was issued to, which needs an ``auth`` callable that identifies one, see :ref:`server-security`.
+It is bound to the caller it was issued to, which needs an ``auth`` callable that identifies one—see :ref:`server-security`.
 Answers expire ten minutes after their question is asked, after which the tool asks again, as covered under :func:`elicit`.
-That binding does not make an answer single-use, so a client can repeat the call that carries it, and a tool whose action must happen at most once, such as a refund, should check it has not already happened.
+Answers are not guaranteed to be used once, so a tool that must not repeat an action should check it has not already happened.
 
 .. _server-logging:
 
