@@ -294,6 +294,16 @@ class AskingTests(ElicitationTestCase, ParametrizedTestCase):
         assert result["isError"] is False
         assert result["content"] == [{"type": "text", "text": "Carried on without it."}]
 
+    def test_answer_returned_to_a_tool_catching_tool_error(self):
+        asked = self.assert_asked(self.call("confirm_catching_tool_error"))
+
+        response = self.answer(
+            "confirm_catching_tool_error", asked, {"confirmed": True}
+        )
+
+        result = self.assert_completed(response)
+        assert result["content"] == [{"type": "text", "text": "Confirmed: True"}]
+
     def test_refusal_not_a_tool_error(self):
         asked = self.assert_asked(self.call("confirm_catching_tool_error"))
 
