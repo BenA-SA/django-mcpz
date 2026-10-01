@@ -9,7 +9,7 @@ Unreleased
   The new ``ElicitationDeclinedError`` and ``ElicitationUnavailableError`` exceptions report a refusal, and the call log gains an ``"input_required"`` outcome.
   Clients on the 2025 versions cannot answer questions, since those versions have no way to carry one.
 
-  `PR #24 <https://github.com/adamchainz/django-mcpz/pull/24>`__.
+  Thanks to  Ben Atkinson in `PR #24 <https://github.com/adamchainz/django-mcpz/pull/24>`__.
 
 1.0.5 (2026-10-01)
 ------------------
