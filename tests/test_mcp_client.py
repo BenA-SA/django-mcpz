@@ -239,4 +239,7 @@ class ElicitationClientTests(SimpleTestCase):
         result = self.call("confirm")
 
         assert result.is_error is True
-        assert "does not support" in result.content[0].text
+        assert result.content[0].text == (
+            "This tool needs to ask you a question, which this client does"
+            " not support (form mode MCP elicitation)."
+        )

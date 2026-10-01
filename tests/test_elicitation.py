@@ -276,8 +276,9 @@ class AskingTests(ElicitationTestCase, ParametrizedTestCase):
         with pytest.raises(ImproperlyConfigured) as excinfo:
             elicit(request, "Really?", Sized)
 
-        assert excinfo.value.args[0].startswith(
-            "elicit() works only inside a tool function"
+        assert excinfo.value.args[0] == (
+            "elicit() works only inside a tool function, called by an MCP"
+            " server, which puts the state it needs on the request."
         )
 
 
@@ -294,7 +295,17 @@ class KeyTests(ElicitationTestCase):
 
         result = self.assert_completed(response)
         assert result["isError"] is True
-        assert "asked under the key 'same'" in logs.output[0]
+        assert (
+            logs.records[0].getMessage()
+            == "Tool 'ask_twice_under_one_key' raised an exception"
+        )
+        exc_info = logs.records[0].exc_info
+        assert exc_info is not None
+        assert str(exc_info[1]) == (
+            "Two elicit() calls in the tool 'ask_twice_under_one_key' asked"
+            " under the key 'same'. Each question needs its own key, since"
+            " its answer comes back under it."
+        )
 
 
 class SeveralQuestionsTests(ElicitationTestCase):
@@ -779,18 +790,50 @@ class ElicitationSchemaTests(SimpleTestCase, ParametrizedTestCase):
     @parametrize(
         "type_,expected",
         [
-            param(int, "must be an object with properties", id="not_an_object"),
-            param(Nested, "'inner' is not one of the types", id="nested_object"),
-            param(Noted, "'note' is a union of types", id="optional_field"),
-            param(Tally, "'counts' is a list of values", id="free_list"),
-            param(Numbered, "'number' offers options", id="non_string_enum"),
+            param(
+                int,
+                "An elicitation schema must be an object with properties,"
+                " such as a msgspec.Struct subclass, not <class 'int'>.",
+                id="not_an_object",
+            ),
+            param(
+                Nested,
+                "Elicitation field 'inner' is not one of the types form mode"
+                " allows: a string, number, integer, boolean, a Literal or"
+                " Enum of strings, or a list of a Literal or Enum of"
+                " strings, as a multiple choice.",
+                id="nested_object",
+            ),
+            param(
+                Noted,
+                "Elicitation field 'note' is a union of types, such as an"
+                " optional field typed with None. Form mode allows one"
+                " primitive type per field, so give the field a default"
+                " instead.",
+                id="optional_field",
+            ),
+            param(
+                Tally,
+                "Elicitation field 'counts' is a list of values that are not"
+                " a fixed set of options. Form mode allows a list only as a"
+                " multiple choice, so annotate its items with a Literal or an"
+                " Enum.",
+                id="free_list",
+            ),
+            param(
+                Numbered,
+                "Elicitation field 'number' offers options that are not all"
+                " strings. Form mode allows a choice between strings only, so"
+                " use a str-valued Enum or a Literal of strings.",
+                id="non_string_enum",
+            ),
         ],
     )
     def test_rejected(self, type_, expected):
         with pytest.raises(ImproperlyConfigured) as excinfo:
             elicitation_schema(type_)
 
-        assert expected in str(excinfo.value)
+        assert str(excinfo.value) == expected
 
 
 class ElicitationStateTests(SimpleTestCase):
@@ -821,7 +864,11 @@ class ElicitationStateTests(SimpleTestCase):
         with pytest.raises(ImproperlyConfigured) as excinfo:
             elicitation.claim_key("name")
 
-        assert "asked under the key 'name'" in str(excinfo.value)
+        assert str(excinfo.value) == (
+            "Two elicit() calls in the tool 'confirm' asked under the key"
+            " 'name'. Each question needs its own key, since its answer"
+            " comes back under it."
+        )
 
     def test_state_round_trip(self):
         elicitation = Elicitation(
