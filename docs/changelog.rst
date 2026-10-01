@@ -2,8 +2,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+1.0.5 (2026-10-01)
+------------------
 
 * Treat ``localhost`` as a loopback host for OAuth redirect URIs, like ``127.0.0.1`` and ``::1`` already were.
   Previously, clients that register a ``localhost`` redirect URI, such as Claude Code with ``http://localhost/callback``, failed with “Unregistered redirect_uri.” and could not sign in.
