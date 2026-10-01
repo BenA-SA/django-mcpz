@@ -250,12 +250,10 @@ Servers
 .. exception:: ElicitationDeclinedError
 
     Raised by :func:`elicit` when the user declined or dismissed the question.
-    A subclass of :class:`ToolError`, so a tool that does not catch it reports the refusal in-band, and the model can offer the user something else.
 
 .. exception:: ElicitationUnavailableError
 
     Raised by :func:`elicit` when the client cannot answer questions.
-    A subclass of :class:`ToolError`, so a tool that does not catch it tells the model the question could not be asked.
     Catch it to fall back to a non-interactive path, such as refusing an action that needed confirmation.
 
 .. class:: Icon(static=None, path=None, mime_type=None, sizes=None, theme=None)
@@ -358,7 +356,7 @@ Records logged to the ``django_mcpz.calls`` logger, as covered in :ref:`server-l
        These are not in the message text, since they may contain sensitive data.
        Include them only in handlers that store data appropriately.
    * - ``outcome``
-     - One of ``"ok"``, ``"invalid_arguments"`` (rejected before the tool ran), ``"input_required"`` (the tool asked the user a question, as in :ref:`server-elicitation`), ``"tool_error"`` (the tool raised :class:`ToolError`), or ``"exception"`` (the tool raised anything else, also logged with its traceback at ``ERROR`` level to the ``django_mcpz`` logger).
+     - One of ``"ok"``, ``"invalid_arguments"`` (rejected before the tool ran), ``"input_required"`` (the tool asked the user a question, as in :ref:`server-elicitation`), ``"tool_error"`` (the tool raised a :class:`BaseToolError`, such as :class:`ToolError`), or ``"exception"`` (the tool raised anything else, also logged with its traceback at ``ERROR`` level to the ``django_mcpz`` logger).
    * - ``duration``
      - Seconds spent validating arguments and running the tool, as a float.
 
