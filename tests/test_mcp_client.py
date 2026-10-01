@@ -176,10 +176,17 @@ class ElicitationClientTests(SimpleTestCase):
     which is the whole flow the multi round-trip pattern describes.
     """
 
-    def call(self, name: str, answer: ElicitationFnT | None = None) -> CallToolResult:
+    def call(
+        self,
+        name: str,
+        answer: ElicitationFnT | None = None,
+        *,
+        path: str = "/elicitation-mcp",
+        headers: dict[str, str] | None = None,
+    ) -> CallToolResult:
         async def run():
             async with mcp_client(
-                "/elicitation-mcp", elicitation_callback=answer
+                path, headers=headers, elicitation_callback=answer
             ) as client:
                 return await client.call_tool(name)
 
@@ -233,6 +240,74 @@ class ElicitationClientTests(SimpleTestCase):
         assert result.content[0].text == (
             "The user declined the question: Really do the thing?"
         )
+
+    def test_question_cancelled(self):
+        async def answer(
+            context: ClientRequestContext, params: ElicitRequestParams
+        ) -> ElicitResult:
+            return ElicitResult(action="cancel")
+
+        result = self.call("confirm", answer)
+
+        assert result.is_error is True
+        assert result.content[0].text == (
+            "The user dismissed the question: Really do the thing?"
+        )
+
+    def test_invalid_answer_asked_again(self):
+        # The server asks again rather than failing, so the SDK handles a
+        # second input_required result for the same question.
+        asked = []
+
+        async def answer(
+            context: ClientRequestContext, params: ElicitRequestParams
+        ) -> ElicitResult:
+            asked.append(params.message)
+            content: dict[str, Any] = {"confirmed": "yes"}
+            if len(asked) > 1:
+                content = {"confirmed": True}
+            return ElicitResult(action="accept", content=content)
+
+        result = self.call("confirm", answer)
+
+        assert asked == ["Really do the thing?", "Really do the thing?"]
+        assert result.is_error is False
+        assert result.content[0].text == "Confirmed: True"
+
+    def test_question_answered_under_auth(self):
+        # The state is bound to the caller, so the SDK must echo it back, and
+        # keep sending the caller's headers, for the answer to be accepted.
+        asked = []
+
+        async def answer(
+            context: ClientRequestContext, params: ElicitRequestParams
+        ) -> ElicitResult:
+            asked.append(params.message)
+            return ElicitResult(action="accept", content={"confirmed": True})
+
+        result = self.call(
+            "confirm_as_user",
+            answer,
+            path="/identified-elicitation-mcp",
+            headers={"X-User": "alice"},
+        )
+
+        assert asked == ["Really do the thing?"]
+        assert result.is_error is False
+        assert result.content[0].text == "alice confirmed: True"
+
+    def test_question_answered_without_auth(self):
+        async def answer(
+            context: ClientRequestContext, params: ElicitRequestParams
+        ) -> ElicitResult:
+            return ElicitResult(action="accept", content={"confirmed": True})
+
+        result = self.call(
+            "confirm_as_user", answer, path="/identified-elicitation-mcp"
+        )
+
+        assert result.is_error is False
+        assert result.content[0].text == "AnonymousUser confirmed: True"
 
     def test_client_that_cannot_answer(self):
         # Without a callback the client declares no elicitation capability.

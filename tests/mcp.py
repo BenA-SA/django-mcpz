@@ -11,6 +11,8 @@ from django.http import HttpRequest, HttpResponse
 from django_mcpz.bearer_tokens.auth import token_auth
 from django_mcpz.oauth.auth import oauth_auth
 from django_mcpz.server import (
+    ElicitationDeclinedError,
+    ElicitationUnavailableError,
     Icon,
     Image,
     MCPServer,
@@ -497,3 +499,68 @@ def ask_impossible(request: HttpRequest) -> str:
 def confirm_as_user(request: HttpRequest) -> str:
     answer = elicit(request, "Really do the thing?", Confirmation)
     return f"{request.user} confirmed: {answer.confirmed}"
+
+
+@elicitation_server.tool(description="Refuse when it cannot ask.")
+def confirm_or_refuse(request: HttpRequest) -> str:
+    try:
+        elicit(request, "Really do the thing?", Confirmation)
+    except ElicitationUnavailableError:
+        return "Refused without confirmation."
+    return "Done."
+
+
+@elicitation_server.tool(description="Carry on when the user declines.")
+def confirm_or_carry_on(request: HttpRequest) -> str:
+    try:
+        answer = elicit(request, "Really do the thing?", Confirmation)
+    except ElicitationDeclinedError:
+        return "Carried on without it."
+    return f"Confirmed: {answer.confirmed}"
+
+
+@elicitation_server.tool(description="Never asks anything.")
+def no_question(request: HttpRequest) -> str:
+    return "No question."
+
+
+# Servers that ask the same question under each kind of authentication, to
+# test that a question is answerable only by the caller it was asked of.
+
+
+def header_identity_auth(request: HttpRequest) -> HttpResponse | None:
+    """Identify a user from a header, without a database lookup."""
+    username = request.headers.get("X-User")
+    if username is None:
+        request.user = AnonymousUser()
+    else:
+        request.user = User(pk=1, username=username)
+    return None
+
+
+identified_elicitation_server = MCPServer(
+    name="identified-elicitation-server",
+    version="1.0.0",
+    auth=header_identity_auth,
+)
+identified_elicitation_server.tool(
+    description="Ask for confirmation, as the calling user."
+)(confirm_as_user)
+
+oauth_elicitation_server = MCPServer(
+    name="oauth-elicitation-server",
+    version="1.0.0",
+    auth=oauth_auth,
+)
+oauth_elicitation_server.tool(description="Ask for confirmation, as the calling user.")(
+    confirm_as_user
+)
+
+bearer_elicitation_server = MCPServer(
+    name="bearer-elicitation-server",
+    version="1.0.0",
+    auth=token_auth,
+)
+bearer_elicitation_server.tool(
+    description="Ask for confirmation, as the calling user."
+)(confirm_as_user)
